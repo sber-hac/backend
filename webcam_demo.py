@@ -12,9 +12,8 @@ import json
 
 class PredictionService():
 
-    def __init__(self):
-        args = self._parse_args()
-        self._model = self.init_model(args.config_path)
+    def __init__(self, config_path):
+        self._model = self.init_model(config_path)
 
     def init_model(self, config_path):
         """
@@ -50,36 +49,6 @@ class PredictionService():
         except ValueError as e:
             raise ValueError(f"Error creating Predictor configuration: {e}")
 
-
-
-    def _parse_args(self):
-        parser = argparse.ArgumentParser(description='MMAction2 webcam demo')
-        parser.add_argument('--config_path', default='config.json', help='model config')
-        parser.add_argument(
-            '--device', type=str, default='cpu', help='CPU/CUDA device option')
-        parser.add_argument(
-            '--camera-id', type=int, default=0, help='camera device id')
-        parser.add_argument(
-            '--sample-length',
-            type=int,
-            default=32,
-            help='len of frame queue')
-        parser.add_argument(
-            '--drawing-fps',
-            type=int,
-            default=20,
-            help='Set upper bound FPS value of the output drawing')
-        parser.add_argument(
-            '--inference-fps',
-            type=int,
-            default=4,
-            help='Set upper bound FPS value of model inference')
-        parser.add_argument(
-            '--openvino',
-            action='store_true',
-            help='Use OpenVINO backend for inference. Available only on Linux')
-        args = parser.parse_args()
-        return args
 
 
     async def get_frame_results(self, frame_queue):
