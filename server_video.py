@@ -10,6 +10,7 @@ import numpy as np
 import uvicorn
 import threading
 import aiohttp
+import requests
 import collections
 import time
 
@@ -43,6 +44,9 @@ recognize_result = ""
 #             full_queue_event.clear()
 #             await websocket.send_text(recognize_result_deq.pop())
 
+def send_message(message):
+    requests.post('http://localhost:8081/sendRecognizedMessage', json = {"result" : message})  
+
     
 
 async def queue_is_full(frames):
@@ -50,6 +54,8 @@ async def queue_is_full(frames):
     recognize_result = await service_prediction.get_frame_results(list(np.array(frames)))
     full_queue_event.set()
     print(recognize_result)
+    if recognize_result:
+        send_message(recognize_result[0])
     frame_queue.clear()
 
 
