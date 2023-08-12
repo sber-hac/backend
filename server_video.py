@@ -6,6 +6,12 @@ import os
 import ssl
 import uuid
 import webcam_demo
+import numpy as np
+import uvicorn
+import threading
+import aiohttp
+import collections
+import time
 
 import cv2
 from aiohttp import web
@@ -25,17 +31,26 @@ app = FastAPI()
 
 frame_queue = []
 
-def queue_is_full(frames):
-    print("something going")
+service_prediction = webcam_demo.PredictionService("config.json")
+full_queue_event = threading.Event()
+recognize_result = ""
+
+# @app.websocket("/result")
+# async def websocket_endpoint(websocket: WebSocket):
+#     await websocket.accept()
+#     while True:
+#         if len(recognize_result_deq) != 0:
+#             full_queue_event.clear()
+#             await websocket.send_text(recognize_result_deq.pop())
+
+    
+
+async def queue_is_full(frames):
+    global recognize_result
+    recognize_result = await service_prediction.get_frame_results(list(np.array(frames)))
+    full_queue_event.set()
+    print(recognize_result)
     frame_queue.clear()
-
-
-@app.websocket("/result")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    while True:
-        data = await websocket.receive_text()
-        await websocket.send_text(f"Message text was: {data}")
 
 
 class VideoTransformTrack(MediaStreamTrack):
@@ -52,11 +67,12 @@ class VideoTransformTrack(MediaStreamTrack):
 
     async def recv(self):
         frame = await self.track.recv()
+        frame_after = VideoFrame.to_ndarray(frame, format="bgr24")
+        img = np.array(cv2.resize(frame_after, (224, 224))[:,:,::-1])
 
         if (len(frame_queue) >= 32):
-            queue_is_full(frame_queue)
-        else:
-            frame_queue.append(frame)
+            await queue_is_full(frame_queue)
+        frame_queue.append(img)
 
         return frame
 
@@ -141,12 +157,35 @@ async def offer(request):
         ),
     )
 
+async def websocket_result(request):
+    print('Websocket connection starting')
+    ws = aiohttp.web.WebSocketResponse()
+    await ws.prepare(request)
+    print('Websocket connection ready')
+    while full_queue_event.is_set():        
+            full_queue_event.clear()
+            if recognize_result:
+                await ws.send_str(recognize_result)
+    return ws
+
+
 
 async def on_shutdown(app):
     # close peer connections
     coros = [pc.close() for pc in pcs]
     await asyncio.gather(*coros)
     pcs.clear()
+
+
+    def _parse_args(self):
+        parser = argparse.ArgumentParser(description='MMAction2 webcam demo')
+        
+        args = parser.parse_args()
+        return args
+    
+def start_uvicorn():
+    global recognize_result
+    uvicorn.run("server_video:app", host="127.0.0.1", port=5000, log_level="info")
 
 
 if __name__ == "__main__":
@@ -163,6 +202,33 @@ if __name__ == "__main__":
     )
     parser.add_argument("--record-to", help="Write received media to a file."),
     parser.add_argument("--verbose", "-v", action="count")
+
+
+    parser.add_argument('--config_path', default='config.json', help='model config')
+    parser.add_argument(
+            '--device', type=str, default='cpu', help='CPU/CUDA device option')
+    parser.add_argument(
+            '--camera-id', type=int, default=0, help='camera device id')
+    parser.add_argument(
+            '--sample-length',
+            type=int,
+            default=32,
+            help='len of frame queue')
+    parser.add_argument(
+            '--drawing-fps',
+            type=int,
+            default=20,
+            help='Set upper bound FPS value of the output drawing')
+    parser.add_argument(
+            '--inference-fps',
+            type=int,
+            default=4,
+            help='Set upper bound FPS value of model inference')
+    parser.add_argument(
+            '--openvino',
+            action='store_true',
+            help='Use OpenVINO backend for inference. Available only on Linux')
+
     args = parser.parse_args()
 
     if args.verbose:
@@ -181,6 +247,9 @@ if __name__ == "__main__":
     app.router.add_get("/", index)
     app.router.add_get("/client.js", javascript)
     app.router.add_post("/offer", offer)
+    # app.router.add_route('GET', '/ws/result', websocket_result)
+    # t1 = threading.Thread(target=start_uvicorn)
+    # t1.start()
     web.run_app(
         app, access_log=None, host=args.host, port=args.port, ssl_context=ssl_context
     )
