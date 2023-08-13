@@ -7,7 +7,6 @@ import ssl
 import uuid
 import webcam_demo
 import numpy as np
-import uvicorn
 import threading
 import requests
 
@@ -35,7 +34,11 @@ recognize_result = ""
 
 
 def send_message(message):
-    requests.post('http://localhost:8081/sendRecognizedMessage', json={"result": message})
+    def send():
+        requests.post('http://localhost:8081/sendRecognizedMessage', json={"result": message})
+
+    t = threading.Thread(target=send)
+    t.start()
 
 
 async def queue_is_full(frames):
