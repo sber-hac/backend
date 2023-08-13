@@ -74,8 +74,8 @@ class VideoTransformTrack(MediaStreamTrack):
         frame_after = VideoFrame.to_ndarray(frame, format="bgr24")
         img = np.array(cv2.resize(frame_after, (224, 224))[:,:,::-1])
 
-        '''if (len(frame_queue) >= 32):
-            await queue_is_full(frame_queue)'''
+        if (len(frame_queue) >= 32):
+            await queue_is_full(frame_queue)
         frame_queue.append(img)
 
         return frame
