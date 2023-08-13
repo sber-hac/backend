@@ -1,10 +1,9 @@
 from fastapi import FastAPI, WebSocket
-import requests
 import collections
 import asyncio
 import uvicorn
 from pydantic import BaseModel
-from fastapi.responses import HTMLResponse
+import speechkit_service
 
 app = FastAPI()
 queue = collections.deque()
@@ -16,6 +15,16 @@ async def websocket_endpoint(websocket: WebSocket):
         if len(queue) != 0:
             await websocket.send_text(queue.pop())
         await asyncio.sleep(1)
+
+@app.websocket("/ws/recognize_audio")
+async def recognize_audio(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        file = await websocket.receive_bytes()
+        with open("record", "wb") as f:
+            f.write(file)
+            speechkit_service.recognize("record")
+
 
 class Item(BaseModel):
     result:str

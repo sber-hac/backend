@@ -1,13 +1,9 @@
-import argparse
-
 import os
-from sys import platform
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 import numpy as np
 from model import Predictor
 from omegaconf import OmegaConf
-from einops import rearrange
 import json
 
 class PredictionService():

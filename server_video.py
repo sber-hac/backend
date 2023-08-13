@@ -9,18 +9,16 @@ import webcam_demo
 import numpy as np
 import uvicorn
 import threading
-import aiohttp
 import requests
-import collections
-import time
+
 
 import cv2
 from aiohttp import web
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRecorder, MediaRelay
-from fastapi import FastAPI, WebSocket
-from fastapi.responses import HTMLResponse
-from av import VideoFrame
+from fastapi import FastAPI
+from av.video.frame import VideoFrame
+from audioTracker import AudioTransformTrack
 
 ROOT = os.path.dirname(__file__)
 
@@ -76,8 +74,8 @@ class VideoTransformTrack(MediaStreamTrack):
         frame_after = VideoFrame.to_ndarray(frame, format="bgr24")
         img = np.array(cv2.resize(frame_after, (224, 224))[:,:,::-1])
 
-        if (len(frame_queue) >= 32):
-            await queue_is_full(frame_queue)
+        '''if (len(frame_queue) >= 32):
+            await queue_is_full(frame_queue)'''
         frame_queue.append(img)
 
         return frame
@@ -132,7 +130,8 @@ async def offer(request):
         log_info("Track %s received", track.kind)
 
         if track.kind == "audio":
-            pc.addTrack(player.audio)
+            pc.addTrack(AudioTransformTrack(
+                relay.subscribe(track)))
             recorder.addTrack(track)
         elif track.kind == "video":
             pc.addTrack(
@@ -163,19 +162,6 @@ async def offer(request):
         ),
     )
 
-async def websocket_result(request):
-    print('Websocket connection starting')
-    ws = aiohttp.web.WebSocketResponse()
-    await ws.prepare(request)
-    print('Websocket connection ready')
-    while full_queue_event.is_set():        
-            full_queue_event.clear()
-            if recognize_result:
-                await ws.send_str(recognize_result)
-    return ws
-
-
-
 async def on_shutdown(app):
     # close peer connections
     coros = [pc.close() for pc in pcs]
@@ -189,10 +175,6 @@ async def on_shutdown(app):
         args = parser.parse_args()
         return args
     
-def start_uvicorn():
-    global recognize_result
-    uvicorn.run("server_video:app", host="127.0.0.1", port=5000, log_level="info")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -253,9 +235,6 @@ if __name__ == "__main__":
     app.router.add_get("/", index)
     app.router.add_get("/client.js", javascript)
     app.router.add_post("/offer", offer)
-    # app.router.add_route('GET', '/ws/result', websocket_result)
-    # t1 = threading.Thread(target=start_uvicorn)
-    # t1.start()
     web.run_app(
         app, access_log=None, host=args.host, port=args.port, ssl_context=ssl_context
     )
