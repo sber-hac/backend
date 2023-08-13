@@ -23,7 +23,8 @@ async def recognize_audio(websocket: WebSocket):
         file = await websocket.receive_bytes()
         with open("record", "wb") as f:
             f.write(file)
-            speechkit_service.recognize("record")
+            result = speechkit_service.recognize("record")
+            await websocket.send_text(result)
 
 
 class Item(BaseModel):
