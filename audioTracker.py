@@ -55,6 +55,7 @@ class AudioTransformTrack(MediaStreamTrack):
                 self.frames.clear()
                 result = speechkit_service.recognize("recordon.wav")
                 print(result)
+                requests.post('http://localhost:8081/sendRecognizedAudioMessage', json={"result": result})
             except Exception as err:
                 print(err)
 
