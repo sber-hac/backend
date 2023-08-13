@@ -19,5 +19,5 @@ def recognize(audio):
     result = model.transcribe_file(audio)
     text_res = ""
     for c, res in enumerate(result):
-        text_res += res.raw_text + "\n"
-    return text_res
+        return res.raw_text + "\n"
+
