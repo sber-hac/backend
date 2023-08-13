@@ -1,8 +1,4 @@
 import wave
-
-import av
-import cv2
-import numpy as np
 import pyaudio as pydio
 from av.audio.frame import AudioFrame
 from pyaudio import PyAudio
@@ -46,20 +42,12 @@ class AudioTransformTrack(MediaStreamTrack):
             wf.close()
             print("recorded audio saved")
             try:
-                #response = requests.post(url='https://smartspeech.sber.ru/rest/v1/speech:recognize',
-                #          headers={'Authorization' : f'Bearer {self.auth_token}',
-                #                    'Content-Type' : 'audio/x-pcm;bit=16;rate=16000'},
-                #          files={'data-binary': open('record.wav', 'rb')}, verify=False)
-
-                #print(response)
                 self.frames.clear()
                 result = speechkit_service.recognize("recordon.wav")
                 print(result)
                 requests.post('http://localhost:8081/sendRecognizedAudioMessage', json={"result": result})
             except Exception as err:
                 print(err)
-
-        # print("audio phase 3")
 
         return frame
 

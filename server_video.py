@@ -11,7 +11,6 @@ import uvicorn
 import threading
 import requests
 
-
 import cv2
 from aiohttp import web
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
@@ -34,18 +33,10 @@ service_prediction = webcam_demo.PredictionService("config.json")
 full_queue_event = threading.Event()
 recognize_result = ""
 
-# @app.websocket("/result")
-# async def websocket_endpoint(websocket: WebSocket):
-#     await websocket.accept()
-#     while True:
-#         if len(recognize_result_deq) != 0:
-#             full_queue_event.clear()
-#             await websocket.send_text(recognize_result_deq.pop())
 
 def send_message(message):
-    requests.post('http://localhost:8081/sendRecognizedMessage', json = {"result" : message})  
+    requests.post('http://localhost:8081/sendRecognizedMessage', json={"result": message})
 
-    
 
 async def queue_is_full(frames):
     global recognize_result
@@ -72,7 +63,7 @@ class VideoTransformTrack(MediaStreamTrack):
     async def recv(self):
         frame = await self.track.recv()
         frame_after = VideoFrame.to_ndarray(frame, format="bgr24")
-        img = np.array(cv2.resize(frame_after, (224, 224))[:,:,::-1])
+        img = np.array(cv2.resize(frame_after, (224, 224))[:, :, ::-1])
 
         if (len(frame_queue) >= 32):
             await queue_is_full(frame_queue)
@@ -162,19 +153,13 @@ async def offer(request):
         ),
     )
 
+
 async def on_shutdown(app):
     # close peer connections
     coros = [pc.close() for pc in pcs]
     await asyncio.gather(*coros)
     pcs.clear()
 
-
-    def _parse_args(self):
-        parser = argparse.ArgumentParser(description='MMAction2 webcam demo')
-        
-        args = parser.parse_args()
-        return args
-    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -191,31 +176,30 @@ if __name__ == "__main__":
     parser.add_argument("--record-to", help="Write received media to a file."),
     parser.add_argument("--verbose", "-v", action="count")
 
-
     parser.add_argument('--config_path', default='config.json', help='model config')
     parser.add_argument(
-            '--device', type=str, default='cpu', help='CPU/CUDA device option')
+        '--device', type=str, default='cpu', help='CPU/CUDA device option')
     parser.add_argument(
-            '--camera-id', type=int, default=0, help='camera device id')
+        '--camera-id', type=int, default=0, help='camera device id')
     parser.add_argument(
-            '--sample-length',
-            type=int,
-            default=32,
-            help='len of frame queue')
+        '--sample-length',
+        type=int,
+        default=32,
+        help='len of frame queue')
     parser.add_argument(
-            '--drawing-fps',
-            type=int,
-            default=20,
-            help='Set upper bound FPS value of the output drawing')
+        '--drawing-fps',
+        type=int,
+        default=20,
+        help='Set upper bound FPS value of the output drawing')
     parser.add_argument(
-            '--inference-fps',
-            type=int,
-            default=4,
-            help='Set upper bound FPS value of model inference')
+        '--inference-fps',
+        type=int,
+        default=4,
+        help='Set upper bound FPS value of model inference')
     parser.add_argument(
-            '--openvino',
-            action='store_true',
-            help='Use OpenVINO backend for inference. Available only on Linux')
+        '--openvino',
+        action='store_true',
+        help='Use OpenVINO backend for inference. Available only on Linux')
 
     args = parser.parse_args()
 
