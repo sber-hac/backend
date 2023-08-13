@@ -21,9 +21,9 @@ async def recognize_audio(websocket: WebSocket):
     await websocket.accept()
     while True:
         file = await websocket.receive_bytes()
-        with open("record", "wb") as f:
+        with open("record.wav", "wb") as f:
             f.write(file)
-            result = speechkit_service.recognize("record")
+            result = speechkit_service.recognize("record.wav")
             await websocket.send_text(result)
 
 
